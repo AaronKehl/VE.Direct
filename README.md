@@ -4,12 +4,12 @@ Victron VE.Direct Python Class Files
 
 ## BlueSolar Hex
 
-Currently vedirect.py contains programming to interact with a Victron Solar Charge Controller.
+Currently vedirect.py contains programming to interact with a Victron Solar Charge Controller. Requires the VE.Direct serial cable (or eventually it could be tweaked to work via bluetooth).
 
 ## How It Works
 
 With vedirect.py in your working directory you can import, then initialize a ve.direct device.
-This is VERY different from current VE.Direct scripts that only retreive/decode the heartbeat from the device.  This class allows all individual parameters (if applicable) to be written/read individually.  
+This is VERY different from current VE.Direct scripts that only retreive/decode the heartbeat from the device.  This class allows all individual parameters (if applicable) to be written/read individually. 
 e.g:
 
 - import vedirect
@@ -17,7 +17,7 @@ e.g:
 
 ## Why
 
-I build remote systems and maintaining energy system insight is critical to my personal development and the robustness of what I design.  These types of scripts allow me to datalog system information to telemeter and/or record to file.  This type of insight shows me how well a system is performing, from an energy perspective, allows me to iterate on design aspects if they are not as robust as expected, and advise on remote system servicing.  Imagine being able to digitally control how your systems function based off of energy system components.  That's what I do! Battery state of charge too low, please go into preserve energy mode!  Battery cell temperatures too low??? Turn on that enclosure heater, but only if we have enough energy capacity or solar generation.  Etcetera, hopefully you get the picture.
+I build remote systems and maintaining energy system insight is critical to my personal development and the robustness of what I design.  These types of scripts allow me to datalog system information to telemeter and/or record to file.  This type of insight shows me how well a system is performing, from an energy perspective, allows me to iterate on design aspects if they are not as robust as expected, and advise on remote system servicing.  Imagine being able to digitally control how your systems function based off of energy system components.  That's what I do! Battery state of charge too low, please go into preserve energy mode!  Battery cell temperatures too low??? Turn on that enclosure heater, but only if we have enough energy capacity or solar generation.  Etcetera, hopefully you get the picture. A lot of the times I will use a Raspberry Pi as the brains of my remote systems, but these types of scripts work on many types of machines.  Also when necessary I adjust these scripts for the equipment in use (e.g. conventional dataloggers).
 
 ## Examples
 
