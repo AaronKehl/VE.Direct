@@ -2,6 +2,7 @@
 #******************************** Dependencies *********************************
 import serial
 import time
+import random
 #*******************************************************************************
 #==================================== Intro ====================================
     # Aaron Kehl
@@ -40,9 +41,9 @@ import time
 #-------------------------------------------------------------------------------
 #===============================================================================
 
-#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< VEDirect Class >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#<<<<<<<<<<<<<<<<<<<<<<<<<<< BlueSolarHex Class >>>>>>>>>>>>>>>>>>>>>>>>>>>
 #******************************** initialize ***********************************
-class vedirect(object):
+class bluesolarhex(object):
     """ Serial Python Interfacing Class for VE.Direct solar charge controller 
     """
     def __init__( self, port ):
@@ -265,11 +266,11 @@ class vedirect(object):
 #--------------------------------- send_cmd ------------------------------------
     def _send_cmd( self, cmd ):
         tx_msg = bytes()
-        tx_msg = ( ":" + cmd ).encode( "utf-8" )
+        tx_cmd = ( ":" + cmd ).encode( "utf-8" )
         crc = self._crc_calc( self._ascii_bytes_to_bytes( cmd.encode( "utf-8" ) ) )
         tx_crc = self._bytes_to_ascii_bytes( crc )
         tx_nln = str.encode( "\n", 'utf-8' )
-        tx_msg = tx_msg + tx_crc + tx_nln
+        tx_msg = tx_cmd + tx_crc + tx_nln
         return_value = self.ERROR_VAL
 
         if self.DEBUG:
@@ -302,18 +303,22 @@ class vedirect(object):
                         time.sleep( 0.002 )
 
                     if  rx_msg.find( b':A' ) == -1 and rx_msg != 'b\xE8' and \
-                        rx_msg.find( b'\t' ) == -1:
+                        rx_msg.find( b'\t' ) == -1 and len( rx_msg ) == 8:
                         # we have a good return that is not the asynch message
                         break
                     else:
                         # sometimes we fail due to the heartbeat
                         # coming from the ve.device, this delay lets
                         # it finish before we try to poll the device again
-                        serial_device.write( b'\x13\x10' )
-                        rx_msg = serial_device.read()
-                        time.sleep( 0.2 )
-                        serial_device.reset_input_buffer()
-                        time.sleep( 0.1 ) 
+                        if i + 1 == n_tries:
+                            print( self._PREFIX + "Max attempts to send cmd reached." )
+                            return self.ERROR_VAL
+                        else:
+                            rnd = random.randrange( 1, 1025 )
+                            dur = ( ( i + 1 ) / n_tries ) + ( rnd / 1024 )
+                            serial_device.send_break( duration=dur )
+                            serial_device.reset_input_buffer()
+                            serial_device.reset_output_buffer()
         except:
             print( self._PREFIX + "Unable to reach device!" )
             try: self._close_port( serial_device )
@@ -329,10 +334,14 @@ class vedirect(object):
         # Start parsing out the response, if these fields don't exist return an error.
         if cmd != "6":
             try: 
+                if cmd == "1" and rx_msg[2:4] == ":5".encode( "utf-8" ): rx_msg = rx_msg[2:]
+                if cmd == "3" and rx_msg[2:4] == ":1".encode( "utf-8" ): rx_msg = rx_msg[2:]
+                if cmd == "4" and rx_msg[2:4] == ":1".ecnode( "utf-8" ): rx_msg = rx_msg[2:]
+                if rx_msg[2:4] == tx_cmd: rx_msg = rx_msg[2:]
                 rx_cmd = rx_msg[:2]
                 rx_dat = rx_msg[2:6]
-                rx_crc = rx_msg[6:8]
-                rx_nln = rx_msg[8:]
+                rx_crc = rx_msg[-3:-1]
+                rx_nln = rx_msg[-1:]
                 
                 # update data and crc to bytes from ascii bytes
                 rx_dat = self._ascii_bytes_to_bytes( rx_dat )
@@ -346,7 +355,7 @@ class vedirect(object):
                     print( self._PREFIX + "rx_nln = " + self._to_hex( rx_nln ) + "\n" )
 
                 if rx_nln != tx_nln:
-                    print( self._PREFIX + "End of command line character not detected! rx_nln = " + str( rx_nln ) + ", tx_nln" + str( tx_nln ) )
+                    print( self._PREFIX + "End of command line character not detected! rx_nln = " + str( rx_nln ) + ", tx_nln = " + str( tx_nln ) )
                     return self.ERROR_VAL 
 
                  # calculate the crc we should be getting back if we've made it this far.
@@ -424,18 +433,22 @@ class vedirect(object):
                     rx_len = len( rx_msg )
                     if rx_len <= bytes_written + data_len*2 + 2 and \
                         rx_msg.find( b':A' ) == -1 and rx_msg != 'b\xE8' and \
-                        rx_msg.find( b'\t' ) == -1:
+                        rx_msg.find( b'\t' ) == -1 and rx_len >= bytes_written:
                         # we have a good return that is not the asynch message
                         break
                     else:
                         # sometimes we fail due to the heartbeat
                         # coming from the ve.device, this delay lets
                         # it finish before we try to poll the device again
-                        serial_device.write( b'\x13\x10' )
-                        rx_msg = serial_device.read()
-                        time.sleep( 0.2 )
-                        serial_device.reset_input_buffer()
-                        time.sleep( 0.1 ) 
+                        if i + 1 == n_tries: 
+                            print( self._PREFIX + "Max attempts to read reached." )
+                            return self.ERROR_VAL
+                        else: 
+                            rnd = random.randrange( 1, 1025 )
+                            dur = ( ( i + 1 ) / n_tries ) + ( rnd / 1024 )
+                            serial_device.send_break( duration=dur )
+                            serial_device.reset_input_buffer()
+                            serial_device.reset_output_buffer()
 
         except:
             print( self._PREFIX + "Unable to reach device!" )
@@ -451,6 +464,7 @@ class vedirect(object):
 
         # Start parsing out the response, if these fields don't exist return an error.
         try: 
+            if rx_msg[2:4] == tx_cmd: rx_msg = rx_msg[2:]
             rx_cmd = rx_msg[:2]
             rx_reg = rx_msg[2:6]
             rx_flg = rx_msg[6:8]
@@ -578,17 +592,22 @@ class vedirect(object):
                     rx_len = len( rx_msg )
                     if rx_len <= bytes_written + data_len*2 + 2 and \
                         rx_msg.find( b':A' ) == -1 and rx_msg != 'b\xE8' and \
-                        rx_msg.find( b'\t' ) == -1:
+                        rx_msg.find( b'\t' ) == -1 and rx_len >= bytes_written:
                         break
                     else:
                         # sometimes we fail due to the heartbeat
                         # coming from the ve.device, this delay lets
                         # it finish before we try to poll the device again
-                        serial_device.write( b'\x13\x10' )
-                        rx_msg = serial_device.read()
-                        time.sleep( 0.2 )
-                        serial_device.reset_input_buffer()
-                        time.sleep( 0.1 ) 
+                        if i + 1 == n_tries: 
+                            print( self._PREFIX + "Max attempts to write reached." )
+                            return self.ERROR_VAL
+                        else: 
+                            rnd = random.randrange( 1, 1025 )
+                            dur = ( ( i + 1 ) / n_tries ) + ( rnd / 1024 )
+                            serial_device.send_break( duration=dur )
+                            serial_device.reset_input_buffer()
+                            serial_device.reset_output_buffer()
+
 
         except:
             print( self._PREFIX + "Unable to reach device!" )
@@ -607,6 +626,7 @@ class vedirect(object):
         
         # Start parsing out the response, if these fields don't exist return an error.
         try: 
+            if rx_msg[2:4] == tx_cmd: rx_msg = rx_msg[2:]
             rx_cmd = rx_msg[:2]
             rx_reg = rx_msg[2:6]
             rx_flg = rx_msg[6:8]
@@ -2821,7 +2841,7 @@ class vedirect(object):
 
 # Tester Function for direct call
 if __name__ == '__main__':
-    mppt = vedirect( 'COM8' )
+    mppt = bluesolarhex( 'COM8' )
     mppt.DEBUG = True
     #mppt.readall
 
@@ -2850,7 +2870,7 @@ if __name__ == '__main__':
     #print( mppt.PREFIX + "Battery temperature compensation = " + str( mppt.battery_temp_comp) + " [mV/K]. ")
     #print( mppt.PREFIX + "Battery type = " + str( mppt.battery_type ) )
     #print( mppt.PREFIX + "Battery maximum current = " + str( mppt.battery_max_curr ) + " [A]." )
-    #print( mppt.PREFIX + "Battery system voltage = " + str( mppt.battery_voltage ) + " [V]." )
+    #print( mppt.PREFIX + "Battery system voltage = " + str( mppt.battery_system_voltage ) + " [V]." )
     #print( mppt.PREFIX + "Battery temperature = " + str( mppt.battery_temp ) + " [°C].")
     #print( mppt.PREFIX + "Battery voltage setting = " + str( mppt.battery_voltage_setting ) + " [V]." )
     #print( mppt.PREFIX + "Battery BMS Present = " + str( mppt.battery_bms_present ) )

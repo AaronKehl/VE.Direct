@@ -4,16 +4,17 @@ Victron VE.Direct Python Class Files
 
 ## BlueSolar Hex
 
-Currently vedirect.py contains programming to interact with a Victron Solar Charge Controller. Requires the VE.Direct serial cable (or eventually it could be tweaked to work via bluetooth).
+Currently these python files contains programming to interact with select VE.Direct devices. Requires the VE.Direct serial cable (or eventually it could be tweaked to work via bluetooth).
 
 ## How It Works
 
-With vedirect.py in your working directory you can import, then initialize a ve.direct device.
-This is VERY different from current VE.Direct scripts that only retreive/decode the heartbeat from the device.  This class allows all individual parameters (if applicable) to be written/read individually. 
+With bluesolarhex.py or bmvhex.py in your working directory you can import, then initialize a ve.direct device.
+This is VERY different from current VE.Direct scripts that only retreive/decode the heartbeat from the device.  This class allows all individual parameters (if applicable) to be written/read individually.  Mainly, read the dunder main at the bottom of each py file to see how you can interact with the VE.Device.
 e.g:
 
-- import vedirect
-- mppt = vedirect( "COM8" )
+- import bluesolarhex, bmvhex
+- mppt = bluesolarhex( "/dev/VESCC" )
+- bmv = bmvhex( "/dev/VEBMV" )
 
 ## Why
 
